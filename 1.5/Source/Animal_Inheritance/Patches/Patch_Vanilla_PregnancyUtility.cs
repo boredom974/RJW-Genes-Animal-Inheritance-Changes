@@ -12,19 +12,26 @@ namespace RJW_BGS
     /// If the settings allow animal gene inheritance, 
     /// the genes are determined and "simply added". 
     /// </summary>
-    [HarmonyPatch(typeof(PregnancyUtility), "GetInheritedGeneSet", new Type[] 
-    { 
-        typeof(Pawn), 
-        typeof(Pawn),
-        //typeof(bool)
-    }
-    )]
+    [HarmonyPatch(typeof(PregnancyUtility))]
     public static class Patch_Vanilla_PregnancyUtility
     {
-        [HarmonyPostfix]
+        [HarmonyPatch("GetInheritedGenes", new Type[] {typeof(Pawn), typeof(Pawn), typeof(Boolean)}, new ArgumentType[] {ArgumentType.Normal, ArgumentType.Normal, ArgumentType.Out}), HarmonyPriority(int.MaxValue), HarmonyPrefix]
+        public static void VanillaGenesInheritance(ref Pawn father, ref Pawn mother)
+        {
+            if (RJW_BGSSettings.rjw_bgs_enabled && RJW_BGSSettings.rjw_bgs_vanilla_inheritance && mother.RaceProps.Humanlike != father.RaceProps.Humanlike)
+            {
+                (Pawn animalParent, bool fatherIsAnimal) = InheritanceUtility.CreateAnimalGeneDummy(father, mother);
+                if (fatherIsAnimal)
+                    father = animalParent;
+                else
+                    mother = animalParent;
+            }
+        }
+        
+        [HarmonyPatch("GetInheritedGeneSet", new Type[] {typeof(Pawn), typeof(Pawn)}), HarmonyPostfix]
         public static void AnimalInheritedGenes(Pawn father, Pawn mother, ref GeneSet __result)
         {
-            if (!RJW_BGSSettings.rjw_bgs_enabled)
+            if (!RJW_BGSSettings.rjw_bgs_enabled || RJW_BGSSettings.rjw_bgs_vanilla_inheritance)
             {
                 return;
             }
